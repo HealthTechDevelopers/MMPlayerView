@@ -9,10 +9,11 @@
 import UIKit
 
 public class MMPlayerPassViewPushTransition: MMPlayerBaseNavTransition, UIViewControllerAnimatedTransitioning {
+
     public func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
         return config.duration
     }
-    
+
     public func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
         let container = transitionContext.containerView
         let toVC = transitionContext.viewController(forKey: .to)!
@@ -21,28 +22,35 @@ public class MMPlayerPassViewPushTransition: MMPlayerBaseNavTransition, UIViewCo
         switch self.operation {
         case .push:
             toVC.view.layoutIfNeeded()
-            
-            
+
+
             guard let from = transitionContext.viewController(forKey: .from),
                 let fromProtocol = from.fromProtocolVC else {
-                    print("Need Called setView")
+                    print("From protocol not found")
+                    transitionContext.completeTransition(true)
                     return
             }
 
             guard let toProtocol = toVC.toProtocolVC else {
-                    print("Need Called setView")
+                print("To Protocol not found")
+                transitionContext.completeTransition(true)
                 return
             }
 
             let passLayer = fromProtocol.passPlayer
             let passContainer = toProtocol.containerView
-            
+
+            passContainer.isHidden = true
+
             if let c = self.config as? MMPlayerPassViewPushConfig {
                 c.passOriginalSuper = passLayer.playView
                 c.playLayer = passLayer
             }
             fromProtocol.transitionWillStart()
+
             let convertRect:CGRect = passLayer.superlayer?.convert(passLayer.superlayer!.frame, to: nil) ?? .zero
+            var passContainerConvertRect: CGRect = passContainer.superview?.convert(passContainer.frame, to: nil) ?? .zero
+            passContainerConvertRect = passContainerConvertRect.offsetBy(dx: 0, dy: 44)
             let finalFrame = transitionContext.finalFrame(for: toVC)
             let originalColor = toVC.view.backgroundColor
             passLayer.clearURLWhenChangeView = false
@@ -54,9 +62,10 @@ public class MMPlayerPassViewPushTransition: MMPlayerBaseNavTransition, UIViewCo
             container.addSubview(pass)
             pass.frame = convertRect
             UIView.animate(withDuration: self.config.duration, animations: {
-                pass.frame = passContainer.frame
+                pass.frame = passContainerConvertRect
             }, completion: { (finish) in
-                pass.frame = passContainer.frame
+                passContainer.isHidden = false
+                self.config.passOriginalSuper?.isHidden = false
                 toVC.view.backgroundColor = originalColor
                 pass.translatesAutoresizingMaskIntoConstraints = false
                 transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
@@ -66,17 +75,18 @@ public class MMPlayerPassViewPushTransition: MMPlayerBaseNavTransition, UIViewCo
             })
         case .pop:
             let from = transitionContext.viewController(forKey: .from)
-            
+
             guard let config = self.config as? MMPlayerPassViewPushConfig else {
                 return
             }
-            
+
             guard let pass = config.playLayer?.playView else {
                 return
             }
-            
+
             guard let to = transitionContext.viewController(forKey: .to),
                 let source =  to.fromProtocolVC  else {
+                    transitionContext.completeTransition(true)
                     print("Need Implement PassViewFromProtocol")
                     return
             }
@@ -84,10 +94,11 @@ public class MMPlayerPassViewPushTransition: MMPlayerBaseNavTransition, UIViewCo
             config.playLayer?.clearURLWhenChangeView = false
             pass.translatesAutoresizingMaskIntoConstraints = true
             let superV = source.backReplaceSuperView?(original: config.passOriginalSuper) ?? config.passOriginalSuper
+            superV?.isHidden = true
             let original:CGRect = pass.convert(pass.frame, to: nil)
 
             let convertRect:CGRect = (superV != nil ) ? superV!.convert(superV!.frame, to: nil) : .zero
-            
+
             if superV != nil {
                 pass.removeFromSuperview()
                 container.addSubview(pass)
@@ -98,7 +109,6 @@ public class MMPlayerPassViewPushTransition: MMPlayerBaseNavTransition, UIViewCo
                 pass.frame = convertRect
             }, completion: { (finish) in
                 config.playLayer?.playView = superV
-                pass.translatesAutoresizingMaskIntoConstraints = false
                 superV?.isHidden = false
                 pass.removeFromSuperview()
                 from?.view.removeFromSuperview()
@@ -109,6 +119,6 @@ public class MMPlayerPassViewPushTransition: MMPlayerBaseNavTransition, UIViewCo
         default:
             break
         }
-        
+
     }
 }

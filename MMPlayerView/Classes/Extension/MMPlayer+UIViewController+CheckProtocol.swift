@@ -23,8 +23,10 @@ extension UIViewController {
     static func findFromVCWithProtocol(vc: UIViewController) -> (MMPlayerFromProtocol & UIViewController)? {
         if let pass = vc as? MMPlayerFromProtocol & UIViewController , pass.willPassView?() ?? true {
             return pass
-        } else if let first = vc.childViewControllers.first(where: { UIViewController.findFromVCWithProtocol(vc: $0) != nil }) as? MMPlayerFromProtocol & UIViewController {
-            return first
+        } else for child in vc.childViewControllers {
+            if let first = findFromVCWithProtocol(vc: child) {
+                return first
+            }
         }
         return nil
     }
