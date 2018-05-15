@@ -25,8 +25,9 @@ extension UIViewController {
             return pass
         } else {
             for child in vc.childViewControllers {
-            if let first = findFromVCWithProtocol(vc: child) {
-                return first
+                if let first = findFromVCWithProtocol(vc: child) {
+                    return first
+                }
             }
         }
         return nil
