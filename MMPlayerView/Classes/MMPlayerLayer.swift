@@ -20,7 +20,7 @@ public class MMPlayerLayer: AVPlayerLayer {
             if newValue == frame {
                 return
             }
-            
+
             super.frame = newValue
             if newValue != .zero && needRefreshFrame {
                 CATransaction.commit()
@@ -30,7 +30,7 @@ public class MMPlayerLayer: AVPlayerLayer {
             return super.frame
         }
     }
-    
+
     fileprivate var isCoverShow = false
     fileprivate var timeObserver: Any?
     fileprivate var isBackgroundPause = false
@@ -40,7 +40,7 @@ public class MMPlayerLayer: AVPlayerLayer {
         "duration",
         "playable",
         "hasProtectedContent",
-    ]
+        ]
     fileprivate var indicator = MMProgress()
     lazy var  bgView: UIView = {
         let v = UIView()
@@ -79,7 +79,7 @@ public class MMPlayerLayer: AVPlayerLayer {
             indicator.set(progress: progressType)
         }
     }
-    
+
     public var coverFitType: CoverViewFitType = .fitToVideoRect {
         didSet {
             thumbImageView.contentMode = (coverFitType == .fitToVideoRect) ? .scaleAspectFit : .scaleAspectFill
@@ -103,14 +103,14 @@ public class MMPlayerLayer: AVPlayerLayer {
         t.clipsToBounds = true
         return t
     }()
-    
+
     public var playView: UIView? {
         set {
             if self.playView != newValue {
                 self._playView = newValue
-                
+
                 if clearURLWhenChangeView && changeViewClearPlayer {
-                   self.playUrl = nil
+                    self.playUrl = nil
                 }
             }
         } get {
@@ -124,26 +124,28 @@ public class MMPlayerLayer: AVPlayerLayer {
             if let block = self.playStatusBlock {
                 block(currentPlayStatus)
             }
-            coverView?.currentPlayer(status: currentPlayStatus)
-            switch self.currentPlayStatus {
-            case .ready:
-                self.thumbImageView.isHidden = false
-                self.coverView?.isHidden = false
-                if self.autoPlay {
-                    self.player?.play()
+            DispatchQueue.main.async {
+                self.coverView?.currentPlayer(status: self.currentPlayStatus)
+                switch self.currentPlayStatus {
+                case .ready:
+                    self.thumbImageView.isHidden = false
+                    self.coverView?.isHidden = false
+                    if self.autoPlay {
+                        self.player?.play()
+                    }
+                case .failed(err: _):
+                    self.thumbImageView.isHidden = false
+                    self.coverView?.isHidden = false
+                    self.startLoading(isStart: false)
+                case .unknown:
+                    self.thumbImageView.isHidden = false
+                    self.coverView?.isHidden = true
+                    self.startLoading(isStart: false)
+                default:
+                    self.thumbImageView.isHidden = true
+                    self.coverView?.isHidden = false
+                    break
                 }
-            case .failed(err: _):
-                self.thumbImageView.isHidden = false
-                self.coverView?.isHidden = false
-                self.startLoading(isStart: false)
-            case .unknown:
-                self.thumbImageView.isHidden = false
-                self.coverView?.isHidden = true
-                self.startLoading(isStart: false)
-            default:
-                self.thumbImageView.isHidden = true
-                self.coverView?.isHidden = false
-                break
             }
         }
     }
@@ -156,7 +158,7 @@ public class MMPlayerLayer: AVPlayerLayer {
             self.isBackgroundPause = false
             self.player?.replaceCurrentItem(with: nil)
             self.showCover(isShow: false)
-            
+
             guard let url = newValue else {
                 return
             }
@@ -177,7 +179,7 @@ public class MMPlayerLayer: AVPlayerLayer {
                                     return
                                 }
                             }
-                            
+
                             let item = AVPlayerItem(asset: a)
                             switch self?.cacheType {
                             case .some(.memory(let count)):
@@ -199,14 +201,14 @@ public class MMPlayerLayer: AVPlayerLayer {
         self.coverView?.isHidden = !enable
         self.tapGesture.isEnabled = enable
     }
-    
+
     fileprivate var isInitLayer = false
     public override init(layer: Any) {
         isInitLayer = true
         super.init(layer: layer)
         (layer as? MMPlayerLayer)?.isInitLayer = false
     }
-    
+
     required public init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
     }
@@ -215,7 +217,7 @@ public class MMPlayerLayer: AVPlayerLayer {
         super.init()
         self.setup()
     }
-    
+
     fileprivate func setup() {
         self.player = AVPlayer()
         self.backgroundColor = UIColor.black.cgColor
@@ -223,18 +225,20 @@ public class MMPlayerLayer: AVPlayerLayer {
         self.addPlayerObserver()
         CATransaction.setDisableActions(true)
     }
-    
+
     func updateCoverConstraint() {
-        let vRect = self.coverFitType == .fitToVideoRect ? videoRect : bgView.bounds
-        if vRect.isEmpty {
-            self.coverView?.isHidden = true
-        } else {
-            self.coverView?.isHidden = (self.tapGesture.isEnabled) ? false : true
-            self.coverView?.frame = vRect
+        DispatchQueue.main.async {
+            let vRect = self.coverFitType == .fitToVideoRect ? self.videoRect : self.bgView.bounds
+            if vRect.isEmpty {
+                self.coverView?.isHidden = true
+            } else {
+                self.coverView?.isHidden = (self.tapGesture.isEnabled) ? false : true
+                self.coverView?.frame = vRect
+            }
+            self.frame = self.bgView.bounds
         }
-        self.frame = bgView.bounds
     }
-    
+
     public func delayHideCover() {
         self.showCover(isShow: true)
         switch self.autoHideCoverType {
@@ -246,12 +250,12 @@ public class MMPlayerLayer: AVPlayerLayer {
         }
     }
     public func replace(cover: UIView & MMPlayerCoverViewProtocol) {
-//    public func replace<T: UIView>(cover:T) where T: MMPlayerCoverViewProtocol{
+        //    public func replace<T: UIView>(cover:T) where T: MMPlayerCoverViewProtocol{
         if let c = self.coverView ,c.isMember(of: cover.classForCoder) {
             c.alpha = 1.0
             return
         }
-        
+
         cover.backgroundColor = UIColor.clear
         cover.layoutIfNeeded()
         coverView?.removeFromSuperview()
@@ -266,7 +270,7 @@ public class MMPlayerLayer: AVPlayerLayer {
         }
         cover.currentPlayer(status: self.currentPlayStatus)
     }
-    
+
     fileprivate var willPlayUrl: URL? {
         didSet {
             if oldValue != willPlayUrl {
@@ -282,7 +286,7 @@ public class MMPlayerLayer: AVPlayerLayer {
     public func stopLoading() {
         self.willPlayUrl = nil
     }
-    
+
     public func startLoading() {
 
         switch self.currentPlayStatus {
@@ -295,12 +299,12 @@ public class MMPlayerLayer: AVPlayerLayer {
         }
         self.playUrl = willPlayUrl
     }
-    
+
     fileprivate func addPlayerObserver() {
         NotificationCenter.default.removeObserver(self)
         if timeObserver == nil {
             timeObserver = self.player?.addPeriodicTimeObserver(forInterval: CMTimeMake(1, 100), queue: DispatchQueue.main, using: { [weak self] (time) in
-                
+
                 if time.isIndefinite {
                     return
                 }
@@ -309,7 +313,7 @@ public class MMPlayerLayer: AVPlayerLayer {
                 }
             })
         }
-        
+
         NotificationCenter.default.addObserver(forName: .UIApplicationWillResignActive, object: nil, queue: nil, using: { [weak self] (nitification) in
             switch self?.currentPlayStatus ?? .unknown {
             case .pause:
@@ -319,7 +323,7 @@ public class MMPlayerLayer: AVPlayerLayer {
             }
             self?.player?.pause()
         })
-        
+
         NotificationCenter.default.addObserver(forName: .UIApplicationDidBecomeActive, object: nil, queue: nil, using: { [weak self] (nitification) in
             if self?.isBackgroundPause == false {
                 self?.player?.play()
@@ -327,7 +331,7 @@ public class MMPlayerLayer: AVPlayerLayer {
             self?.isBackgroundPause = false
         })
         NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: nil, queue: nil, using: { [weak self] (_) in
-            
+
             if let s = self?.currentPlayStatus {
                 switch s {
                 case .playing, .pause:
@@ -346,7 +350,7 @@ public class MMPlayerLayer: AVPlayerLayer {
         self.player?.safeAdd(observer: self, forKeyPath: "rate", options: [.new, .old], context: nil)
         self.player?.safeAdd(observer: self, forKeyPath: "currentItem", options: [.new , .old], context: nil)
     }
-    
+
     func removeAllObserver() {
         bgView.safeRemove(observer: self, forKeyPath: "frame")
         bgView.safeRemove(observer: self, forKeyPath: "bounds")
@@ -363,9 +367,9 @@ public class MMPlayerLayer: AVPlayerLayer {
             timeObserver = nil
         }
     }
-    
+
     override public func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        
+
         if let k = keyPath {
             switch k {
             case "frame":
@@ -380,7 +384,7 @@ public class MMPlayerLayer: AVPlayerLayer {
                 }
             case "videoRect":
                 let old = (change?[.oldKey] as? CGRect) ?? .zero
-                
+
                 if let new = change?[.newKey] as? CGRect ,old != new {
                     self.updateCoverConstraint()
                 }
@@ -389,7 +393,7 @@ public class MMPlayerLayer: AVPlayerLayer {
                     let new = change?[.newKey] as? Bool , old != new{
                     coverView?.player?(isMuted: new)
                 }
-                
+
             case "rate":
                 switch self.currentPlayStatus {
                 case .playing, .pause, .ready:
@@ -411,7 +415,7 @@ public class MMPlayerLayer: AVPlayerLayer {
                     old.safeRemove(observer: self, forKeyPath: "playbackLikelyToKeepUp")
                     old.safeRemove(observer: self, forKeyPath: "status")
                 }
-                
+
                 if let new = change?[.newKey] as? AVPlayerItem {
                     new.safeAdd(observer: self, forKeyPath: "status", options: [.new], context: nil)
                     new.safeAdd(observer: self, forKeyPath: "playbackLikelyToKeepUp", options: [.new], context: nil)
@@ -427,7 +431,7 @@ public class MMPlayerLayer: AVPlayerLayer {
                 }
             case "status":
                 let s = self.convertItemStatus()
-                
+
                 switch s {
                 case .failed(_) , .unknown:
                     self.currentPlayStatus = s
@@ -451,7 +455,7 @@ public class MMPlayerLayer: AVPlayerLayer {
             }
         }
     }
-    
+
     fileprivate func convertItemStatus() -> MMPlayerPlayStatus {
         if let item = self.player?.currentItem {
             switch item.status {
@@ -466,14 +470,14 @@ public class MMPlayerLayer: AVPlayerLayer {
         }
         return .unknown
     }
-    
+
     @objc func touchAction(gesture: UITapGestureRecognizer) {
         switch self.currentPlayStatus {
         case .unknown:
             return
         default: break
         }
-        
+
         if let p = self.playView {
             let point = gesture.location(in: p)
             if self.videoRect.isEmpty || self.videoRect.contains(point) {
@@ -493,27 +497,31 @@ public class MMPlayerLayer: AVPlayerLayer {
             default: break
             }
         }
-        
-        
+
+
         if let cover = self.coverView ,
             cover.responds(to: #selector(cover.coverView(isShow:))) {
             cover.coverView!(isShow: isShow)
             return
         }
-        
-        UIView.animate(withDuration: 0.2, animations: { [weak self] in
-            self?.coverView?.alpha = (isShow) ? 1.0 : 0.0
-        })
-    }
-    
-    fileprivate func startLoading(isStart: Bool) {
-        if isStart {
-            self.indicator.start()
-        } else {
-            self.indicator.stop()
+        DispatchQueue.main.async {
+
+            UIView.animate(withDuration: 0.2, animations: { [weak self] in
+                self?.coverView?.alpha = (isShow) ? 1.0 : 0.0
+            })
         }
     }
-    
+
+    fileprivate func startLoading(isStart: Bool) {
+        DispatchQueue.main.async {
+            if isStart {
+                self.indicator.start()
+            } else {
+                self.indicator.stop()
+            }
+        }
+    }
+
     deinit {
         if !isInitLayer {
             self.removeAllObserver()
