@@ -124,31 +124,43 @@ public class MMPlayerLayer: AVPlayerLayer {
             if let block = self.playStatusBlock {
                 block(currentPlayStatus)
             }
-            DispatchQueue.main.async {
-                self.coverView?.currentPlayer(status: self.currentPlayStatus)
-                switch self.currentPlayStatus {
-                case .ready:
-                    self.thumbImageView.isHidden = false
-                    self.coverView?.isHidden = false
-                    if self.autoPlay {
-                        self.player?.play()
-                    }
-                case .failed(err: _):
-                    self.thumbImageView.isHidden = false
-                    self.coverView?.isHidden = false
-                    self.startLoading(isStart: false)
-                case .unknown:
-                    self.thumbImageView.isHidden = false
-                    self.coverView?.isHidden = true
-                    self.startLoading(isStart: false)
-                default:
-                    self.thumbImageView.isHidden = true
-                    self.coverView?.isHidden = false
-                    break
+            self.coverView?.currentPlayer(status: self.currentPlayStatus)
+
+            if Thread.current.isMainThread {
+                self.needUpdateViewForNewPlayStatus(status: currentPlayStatus)
+            } else {
+                DispatchQueue.main.async {
+                    self.needUpdateViewForNewPlayStatus(status: self.currentPlayStatus)
                 }
             }
         }
     }
+
+    private func needUpdateViewForNewPlayStatus(status: MMPlayerPlayStatus) {
+
+        switch status {
+        case .ready:
+            self.thumbImageView.isHidden = false
+            self.coverView?.isHidden = false
+            if self.autoPlay {
+                self.player?.play()
+            }
+        case .failed(err: _):
+            self.thumbImageView.isHidden = false
+            self.coverView?.isHidden = false
+            self.startLoading(isStart: false)
+        case .unknown:
+            self.thumbImageView.isHidden = false
+            self.coverView?.isHidden = true
+            self.startLoading(isStart: false)
+        default:
+            self.thumbImageView.isHidden = true
+            self.coverView?.isHidden = false
+            break
+        }
+
+    }
+
     fileprivate var asset: AVURLAsset?
 
     public var cacheType: MMPlayerCacheType = .none
